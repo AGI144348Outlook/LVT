@@ -29,8 +29,11 @@ I. Core Dynamics (1–16)
 II. State Evolution Operators (17–32)
 
 ▣   ⧈   ↦   ⊙
+
 σ   ⤡   ⊞   ⊤
+
 ⊕   ⊖   ⊗   ⊘
+
 ⊚   ⊛   ⊜   ⊝
 
 
