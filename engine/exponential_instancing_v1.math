@@ -1,1 +1,13 @@
+# Exponential Instancing Methodology
+**Efficiency Strategy:** Binary Scaling ($2^n$)
+
+## 1. Computational Efficiency
+Instead of calculating $N$ unique particles, the Manifold Engine creates **Spatial Instances**.
+- **Master Pointer:** All instances point to the `seed_hydrogen_replication.py` master class.
+- **Delta Table:** The system only stores the $[dx, dy, dz]$ offset for each instance relative to the square's origin.
+
+## 2. Scaling Stages
+- **$2^0$ to $2^{10}$:** Atomic Cloud Formation (Standard Rendering)
+- **$2^{10}$ to $2^{30}$:** Nebular Density (Volumetric Inference)
+- **$2^{40}+$:** Stellar Ignition (Triggering `supernova_compiler_logic.md`)
 
