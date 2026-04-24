@@ -1,0 +1,20 @@
+{
+  "table_version": "LVT-High-Fidelity-1.0",
+  "nodes": [
+    {
+      "symbol": "H",
+      "atomic_number": 1,
+      "manifold_id": "M_001",
+      "surface_coordinates": [0.0, 0.0],
+      "status": "Seeded"
+    },
+    {
+      "symbol": "He",
+      "atomic_number": 2,
+      "manifold_id": "M_002",
+      "surface_coordinates": [1.0, 0.0],
+      "status": "Pending_Synthesis"
+    }
+  ],
+  "synthesis_rules": "Refer to /engine/supernova_compiler_logic.md"
+}
