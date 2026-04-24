@@ -1,1 +1,24 @@
 
+{
+  "coordinate_system": "Recursive Fractal Grid",
+  "base_unit": "EVE_Standard_Meter",
+  "scaling_levels": {
+    "Macro": {
+      "level": 0,
+      "unit_scale": "1.0",
+      "purpose": "Environmental Navigation"
+    },
+    "Meso": {
+      "level": -10,
+      "unit_scale": "1e-3",
+      "purpose": "Object Interaction"
+    },
+    "Micro": {
+      "level": -35,
+      "unit_scale": "1e-11",
+      "purpose": "Atomic Cartesian Replication (Hydrogen Seed)"
+    }
+  },
+  "address_logic": "Hash-Based Leaf Nodes",
+  "precision": "64-bit Floating Point per Recursive Level"
+}
