@@ -1,0 +1,12 @@
+{
+  "physical_constants": {
+    "planck_length": "1.616255e-35",
+    "bohr_radius": "5.291772e-11",
+    "speed_of_light": 299792458,
+    "gravitational_constant": "6.67430e-11"
+  },
+  "grid_units": {
+    "1_unit": "bohr_radius",
+    "fractal_depth_max": 256
+  }
+}
