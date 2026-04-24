@@ -19,8 +19,11 @@ The Kernel judges the "Validity" of an LVT by its resonance with the **Fractal G
 I. Core Dynamics (1–16)
 
 ⬡   △   ◯   ↺
+
 ⬢   ⟳   ⇢   ∫
+
 ⧖   ≋   ⌖   ⚖
+
 ⤓   ⏳   ⨝   𝜕
 
 
@@ -42,8 +45,11 @@ II. State Evolution Operators (17–32)
 III. Recursive / Fractal Layer (33–48)
 
 ⟳   ⟲   ◉   ⧗
+
 ⧘   ⬓   ▸   ⇡
+
 ⏷   ⧕   ⬢   ↻
+
 ⋈   ⋉   ⋊   ⋄
 
 
@@ -52,8 +58,11 @@ III. Recursive / Fractal Layer (33–48)
 IV. Structural / Spatial Substrate (49–64)
 
 ◦   ●   ▢   □
+
 ⬚   ⧫   ◇   ◆
+
 △   ▽   ◁   ▷
+
 ⬠   ⬟   ⬢   ⬣
 
 
@@ -62,8 +71,11 @@ IV. Structural / Spatial Substrate (49–64)
 V. Control / Learning / Adaptation (65–80)
 
 ∇   ε   η   γ
+
 λ   ρ   Θ   ξ
+
 μ   π   δ   α
+
 β   κ   τ   φ
 
 
@@ -72,8 +84,11 @@ V. Control / Learning / Adaptation (65–80)
 VI. Emergent / Virtual Constructs (81–96)
 
 ☉   ◉   ◎   ◍
+
 ◌   ◐   ◑   ◒
+
 ◓   ☯   ☢   ☣
+
 ☰   ☱   ☲   ☳
 
 
