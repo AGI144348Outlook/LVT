@@ -34,3 +34,37 @@ We are currently in the **Provenance & Specification** phase. We invite develope
 This work is part of the **Dual-LVT Mind Domain Vault**. All symbolic rights are reserved. For commercial licensing and collaboration inquiries, contact:
 **Timothy Marvin Jr.** | agi144348@outlook.com
 *“One token. Morphological dynamism. Infinite precision.”*
+
+
+
+
+
+
+
+# LVT-EVE: The Liminal Vision Token & Enveloping Virtual Environment
+
+**Architect:** Timothy Marvin Jr.
+**Version:** 1.0 (Physics-Ready / Lexical-Integrated)
+
+## Overview
+LVT-EVE is a multi-modal architectural protocol designed to provide Artificial General Intelligence (AGI) with a high-fidelity "Cognitive Chassis." By integrating a **Manifold Engine** with a **Fractal Grid substrate**, this repository enables a decentralized environment where language, physics, and data storage occupy a unified Cartesian space.
+
+## The Triple-Purpose Manifold
+The core of this repository is the Manifold Engine, which serves three distinct functions:
+1. **Lexical (Sentence Engine):** Mapping semantic relationships and thesaurus clusters into 3D proximity maps using Mashet Symbology.
+2. **Spatial (Physics Engine):** Forging atomic-level replicates (starting with the Hydrogen Seed) using Planck-scale recursive math.
+3. **Storage (Meta-Filing):** A coordinate-based retrieval system where data is "visited" rather than "searched," pinned to immutable points in the Fractal Grid.
+
+## Repository Structure
+- **/engine**: Core execution logic for manifold projection and the Supernova compiler.
+- **/math**: The physical constants and wave-function equations governing atomic fidelity.
+- **/grid**: The EVE substrate and recursive fractal coordinate mapping logic.
+- **/kernel**: The executive "Mind" of the system, handling symbolic judgment and discretionary imagination.
+- **/contracts**: ERC-1155 implementation and the EVE Environment Wrapper for on-chain provenance.
+- **/manifesto**: The modular philosophical and ethical framework defining Cognitive Sovereignty.
+
+## Vision: The AI Chassis
+The LVT-EVE protocol is intended to serve as an internal world-model for AI-driven robotics and artificed imagination. It centers the Avatar as the origin point of reality, utilizing "Recyclical Sensory Dynamics" to maintain a high-resolution environment within the observer's reach while managing resources through principled decoherence.
+
+---
+*For technical deep-dives, begin with `/manifesto/00_preamble.md` and the mathematical proofs in `/math`.*
