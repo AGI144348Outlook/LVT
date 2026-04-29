@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mashet Sentence Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@300;400;700&family=Share+Tech+Mono&family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #050505;
+    --amber: #c8922a;
+    --amber-bright: #f0b847;
+    --amber-dim: #6b4e15;
+    --white: #e8e4d9;
+    --dim: #4a4540;
+    --row-border: rgba(200,146,42,0.15);
+    --glyph-size: 40px;
+    --word-active: rgba(200,146,42,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(200,146,42,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,146,42,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 960px; margin: 0 auto;
+    padding: 20px 12px 80px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    padding: 24px 0 28px;
+    border-bottom: 1px solid var(--row-border);
+    margin-bottom: 24px;
+  }
+
+  .header-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(13px, 3.5vw, 20px);
+    letter-spacing: 0.18em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .header-formula {
+    font-family: 'Noto Sans Hebrew', sans-serif;
+    font-size: clamp(14px, 4vw, 22px);
+    color: rgba(232,228,217,0.35);
+    direction: ltr;
+    letter-spacing: 0.05em;
+  }
+
+  .header-formula span { color: var(--amber-bright); }
+
+  /* SENTENCE BAR */
+  .sentence-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    padding: 12px 16px;
+    border: 1px solid var(--row-border);
+    background: rgba(10,10,15,0.6);
+    margin-bottom: 20px;
+    min-height: 56px;
+    direction: rtl;
+  }
+
+  .sentence-bar-label {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--dim);
+    text-transform: uppercase;
+    direction: ltr;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .word-token {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(200,146,42,0.08);
+    border: 1px solid rgba(200,146,42,0.25);
+    border-radius: 3px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    direction: ltr;
+  }
+
+  .word-token:hover { border-color: var(--amber); background: rgba(200,146,42,0.15); }
+
+  .word-token.active {
+    border-color: var(--amber-bright);
+    background: rgba(200,146,42,0.2);
+    box-shadow: 0 0 8px rgba(200,146,42,0.25);
+  }
+
+  .word-token .tok-hebrew {
+    font-family: 'Noto Sans Hebrew', sans-serif;
+    font-size: 20px;
+    color: var(--amber-bright);
+    direction: rtl;
+  }
+
+  .word-token .tok-phonetic {
+    font-size: 10px;
+    color: var(--amber-dim);
+    direction: ltr;
+  }
+
+  .word-token .tok-approx {
+    font-size: 10px;
+    color: rgba(232,228,217,0.4);
+    direction: ltr;
+  }
+
+  .word-token .tok-delete {
+    font-size: 10px;
+    color: var(--dim);
+    cursor: pointer;
+    padding: 0 2px;
+    margin-left: 4px;
+    transition: color 0.15s;
+  }
+
+  .word-token .tok-delete:hover { color: rgba(200,80,60,0.7); }
+
+  .word-add-btn {
+    background: transparent;
+    border: 1px dashed rgba(200,146,42,0.2);
+    color: var(--amber-dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    padding: 4px 12px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    direction: ltr;
+    border-radius: 3px;
+  }
+
+  .word-add-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  .sentence-empty {
+    font-size: 11px;
+    color: var(--dim);
+    letter-spacing: 0.2em;
+    direction: ltr;
+    font-style: italic;
+  }
+
+  /* ACTIVE WORD BUILDER */
+  .word-builder {
+    border: 1px solid rgba(200,146,42,0.2);
+    background: rgba(10,10,20,0.5);
+    margin-bottom: 20px;
+  }
+
+  .word-builder-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--row-border);
+    direction: ltr;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .word-builder-label {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+
+  .word-builder-glyphs {
+    font-family: 'Noto Sans Hebrew', sans-serif;
+    font-size: 22px;
+    color: var(--amber-bright);
+    direction: rtl;
+    text-shadow: 0 0 14px rgba(200,146,42,0.35);
+    min-width: 32px;
+    text-align: right;
+  }
+
+  .word-builder-dim {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--amber-dim);
+    direction: ltr;
+  }
+
+  /* GLYPH ROWS */
+  .substrate-stack { display: flex; flex-direction: column; }
+
+  .substrate-row { animation: rowReveal 0.4s ease forwards; opacity: 0; }
+
+  @keyframes rowReveal {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .row-label {
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--amber-dim);
+    text-align: center;
+    padding: 8px 0 4px;
+    text-transform: uppercase;
+    direction: ltr;
+  }
+
+  .row-label.active-label { color: var(--amber); }
+
+  .glyph-row {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 3px;
+    overflow-x: auto;
+    padding: 6px 8px 10px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--amber-dim) transparent;
+    border-bottom: 1px solid rgba(200,146,42,0.06);
+  }
+
+  .glyph-row::-webkit-scrollbar { height: 2px; }
+  .glyph-row::-webkit-scrollbar-thumb { background: var(--amber-dim); }
+
+  .glyph-btn {
+    flex-shrink: 0;
+    width: var(--glyph-size);
+    height: var(--glyph-size);
+    background: transparent;
+    border: 1px solid rgba(200,146,42,0.18);
+    border-radius: 3px;
+    color: var(--white);
+    font-family: 'Noto Sans Hebrew', sans-serif;
+    font-size: 21px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .glyph-btn:hover:not(:disabled) {
+    border-color: var(--amber);
+    color: var(--amber-bright);
+    background: rgba(200,146,42,0.08);
+    transform: translateY(-2px);
+  }
+
+  .glyph-btn.selected {
+    border-color: var(--amber-bright);
+    background: rgba(200,146,42,0.18);
+    color: var(--amber-bright);
+    box-shadow: 0 0 10px rgba(200,146,42,0.28);
+  }
+
+  .glyph-btn:disabled:not(.selected) { opacity: 0.15; cursor: default; }
+
+  /* WORD CONTROLS */
+  .word-controls {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px;
+    direction: ltr;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-btn {
+    background: transparent;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    padding: 6px 16px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .ctrl-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .ctrl-btn.primary { border-color: var(--amber-dim); color: var(--amber); }
+  .ctrl-btn.primary:hover { border-color: var(--amber-bright); background: rgba(200,146,42,0.08); }
+  .ctrl-btn.commit { border-color: rgba(100,180,100,0.3); color: rgba(140,210,140,0.7); }
+  .ctrl-btn.commit:hover { border-color: rgba(100,200,100,0.6); color: rgba(160,230,160,0.9); background: rgba(100,180,100,0.06); }
+
+  /* SENTENCE CONTROLS */
+  .sentence-controls {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 0 0 24px;
+    flex-wrap: wrap;
+  }
+
+  /* NULL CELL ──────────────────────────────────────────────────── */
+  .glyph-btn.null-cell {
+    border-color: rgba(200,146,42,0.45);
+    color: var(--amber);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    position: relative;
+  }
+  .glyph-btn.null-cell:hover:not(:disabled) {
+    border-color: var(--amber-bright);
+    color: var(--amber-bright);
+    background: rgba(200,146,42,0.14);
+    box-shadow: 0 0 12px rgba(200,146,42,0.35);
+    transform: translateY(-2px);
+  }
+  .glyph-btn.null-cell::after {
+    content: '1/23';
+    position: absolute;
+    bottom: 1px; right: 2px;
+    font-size: 6px;
+    color: var(--amber-dim);
+    letter-spacing: 0;
+  }
+
+  /* NULL OPERATOR MAP ──────────────────────────────────────────── */
+  .null-map-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(2px);
+  }
+  .null-map-overlay.active { display: flex; }
+
+  .null-map-panel {
+    background: #080808;
+    border: 1px solid var(--amber);
+    width: min(90vw, 420px);
+    box-shadow: 0 0 40px rgba(200,146,42,0.18);
+    animation: rowReveal 0.25s ease forwards;
+  }
+
+  .null-map-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--row-border);
+  }
+
+  .null-map-title {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+
+  .null-map-sub {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--amber-dim);
+    margin-top: 2px;
+  }
+
+  .null-map-close {
+    background: transparent;
+    border: none;
+    color: var(--dim);
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    transition: color 0.15s;
+  }
+  .null-map-close:hover { color: var(--amber); }
+
+  .null-op-list { padding: 12px 0; }
+
+  .null-op-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 20px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(200,146,42,0.06);
+    transition: background 0.15s;
+  }
+  .null-op-item:last-child { border-bottom: none; }
+  .null-op-item:hover { background: rgba(200,146,42,0.06); }
+
+  .null-op-sym {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 22px;
+    color: var(--amber-bright);
+    min-width: 28px;
+    text-align: center;
+    flex-shrink: 0;
+    line-height: 1;
+    padding-top: 2px;
+  }
+
+  .null-op-body { flex: 1; }
+
+  .null-op-name {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  .null-op-desc {
+    font-size: 10px;
+    color: rgba(232,228,217,0.5);
+    line-height: 1.6;
+    letter-spacing: 0.04em;
+  }
+
+  .null-op-key {
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    color: var(--amber-dim);
+    background: rgba(200,146,42,0.08);
+    border: 1px solid rgba(200,146,42,0.2);
+    padding: 2px 6px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    align-self: center;
+    text-transform: uppercase;
+  }
+
+  /* SENTENCE DEFINITION BLOCK */
+  .sentence-definition-block {
+    padding: 18px 22px 16px;
+    border-bottom: 1px solid rgba(200,146,42,0.18);
+    background: rgba(200,146,42,0.04);
+    direction: ltr;
+  }
+
+  .sentence-def-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+
+  .sentence-def-label {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.28em;
+    color: var(--amber-bright);
+    text-transform: uppercase;
+  }
+
+  .definition-badge {
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--amber-dim);
+    border: 1px solid rgba(200,146,42,0.2);
+    padding: 2px 8px;
+    text-transform: uppercase;
+  }
+
+  .sentence-def-content .wri-approx {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+
+  .sentence-def-content .wri-def {
+    font-size: 12.5px;
+    line-height: 1.85;
+  }
+  .word-token.terminator {
+    background: transparent;
+    border: 1px solid rgba(200,146,42,0.2);
+    padding: 4px 8px;
+    cursor: default;
+  }
+  .word-token.terminator .tok-sym {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 18px;
+    color: var(--amber-dim);
+  }
+  .word-token.terminator .tok-label {
+    font-size: 8px;
+    color: rgba(200,146,42,0.35);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* INVERTED WORD in sentence bar */
+  .word-token.inverted {
+    border-color: rgba(200,80,140,0.4);
+    background: rgba(200,80,140,0.06);
+  }
+  .word-token.inverted .tok-hebrew { color: rgba(220,140,200,0.9); }
+
+  /* SUPERPOSITION WORD */
+  .word-token.superposition {
+    border-color: rgba(80,140,220,0.4);
+    background: rgba(80,140,220,0.06);
+    border-style: dashed;
+  }
+  .word-token.superposition .tok-hebrew { color: rgba(140,180,240,0.9); }
+
+  /* NULL STATUS BAR */
+  .null-status {
+    font-size: 9px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    padding: 4px 16px;
+    color: var(--amber-dim);
+    border-top: 1px solid rgba(200,146,42,0.06);
+    direction: ltr;
+    display: none;
+  }
+  .null-status.visible { display: block; }
+
+  /* WORD RESONANCE (inline per word) */
+  .word-resonance-inline {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(200,146,42,0.08);
+    background: rgba(200,146,42,0.03);
+    direction: ltr;
+    display: none;
+  }
+
+  .word-resonance-inline.visible { display: block; }
+
+  .wri-phonetic {
+    font-size: 14px;
+    color: rgba(232,228,217,0.7);
+    margin-bottom: 4px;
+    letter-spacing: 0.1em;
+  }
+
+  .wri-phonetic .ph-ipa { font-size: 11px; color: var(--amber-dim); margin-left: 8px; }
+
+  .wri-approx {
+    font-size: 16px;
+    color: var(--amber-bright);
+    margin-bottom: 10px;
+  }
+
+  .wri-approx .approx-symbol { color: var(--amber-dim); font-size: 12px; margin-right: 4px; }
+  .wri-approx .approx-note { font-size: 9px; letter-spacing: 0.2em; color: var(--dim); margin-left: 8px; text-transform: uppercase; vertical-align: middle; }
+
+  .wri-def {
+    font-size: 11.5px;
+    line-height: 1.85;
+    color: rgba(232,228,217,0.8);
+    border-left: 2px solid var(--amber-dim);
+    padding-left: 12px;
+    white-space: pre-wrap;
+    margin-bottom: 10px;
+  }
+
+  .wri-axes { display: flex; flex-wrap: wrap; gap: 5px; }
+
+  /* SENTENCE RESONANCE PANEL */
+  .sentence-panel {
+    border: 1px solid rgba(200,146,42,0.25);
+    background: rgba(10,10,15,0.9);
+    display: none;
+    margin-top: 8px;
+  }
+
+  .sentence-panel.visible { display: block; animation: rowReveal 0.5s ease forwards; }
+
+  .sentence-panel-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--row-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    direction: ltr;
+  }
+
+  .sp-title {
+    font-family: 'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+
+  .sp-tag { font-size: 10px; letter-spacing: 0.18em; color: var(--amber-dim); }
+
+  /* SENTENCE PHONETIC DISPLAY */
+  .sentence-phonetic-block {
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid rgba(200,146,42,0.1);
+    background: rgba(200,146,42,0.03);
+    direction: ltr;
+  }
+
+  .sp-section-label {
+    font-size: 9px;
+    letter-spacing: 0.28em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .sentence-full-hebrew {
+    font-family: 'Noto Sans Hebrew', sans-serif;
+    font-size: clamp(22px, 5vw, 36px);
+    color: var(--amber-bright);
+    direction: rtl;
+    text-shadow: 0 0 18px rgba(200,146,42,0.35);
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+
+  .sentence-romanized {
+    font-size: 17px;
+    color: rgba(232,228,217,0.85);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  .sentence-ipa {
+    font-size: 13px;
+    color: var(--amber-dim);
+    letter-spacing: 0.06em;
+    margin-bottom: 10px;
+  }
+
+  .sentence-approx-block {
+    font-size: 15px;
+    color: var(--amber-bright);
+    margin-top: 10px;
+  }
+
+  .sentence-approx-block .approx-symbol { color: var(--amber-dim); margin-right: 5px; font-size: 12px; }
+  .sentence-approx-block .approx-note { font-size: 9px; letter-spacing: 0.2em; color: var(--dim); margin-left: 8px; text-transform: uppercase; vertical-align: middle; }
+
+  .word-breakdown-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+    direction: ltr;
+  }
+
+  .word-breakdown-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: rgba(200,146,42,0.06);
+    border: 1px solid rgba(200,146,42,0.15);
+    border-radius: 3px;
+    padding: 6px 12px;
+    gap: 2px;
+    min-width: 60px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+
+  .word-breakdown-chip:hover {
+    border-color: rgba(200,146,42,0.4);
+    background: rgba(200,146,42,0.1);
+  }
+
+  .word-breakdown-chip.expanded {
+    border-color: var(--amber);
+    background: rgba(200,146,42,0.1);
+    width: 100%;
+  }
+
+  .wbc-toggle {
+    font-size: 8px;
+    color: var(--amber-dim);
+    letter-spacing: 0.2em;
+    margin-top: 2px;
+    text-transform: uppercase;
+  }
+
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: 0.35; }
+  }
+  .loading-pulse { animation: pulse 1.4s ease infinite; color: var(--amber-dim); font-style: italic; }
+
+  .wbc-expand-panel {
+    display: none;
+    width: 100%;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(200,146,42,0.15);
+    text-align: left;
+    direction: ltr;
+  }
+
+  .word-breakdown-chip.expanded .wbc-expand-panel { display: block; }
+
+  .wbc-exp-phonetic {
+    font-size: 13px;
+    color: rgba(232,228,217,0.75);
+    letter-spacing: 0.08em;
+    margin-bottom: 2px;
+  }
+
+  .wbc-exp-ipa { font-size: 10px; color: var(--amber-dim); margin-bottom: 8px; }
+
+  .wbc-exp-approx {
+    font-size: 14px;
+    color: var(--amber-bright);
+    margin-bottom: 8px;
+  }
+
+  .wbc-exp-approx .approx-symbol { color: var(--amber-dim); font-size: 11px; margin-right: 3px; }
+
+  .wbc-exp-type {
+    font-size: 10px;
+    color: rgba(232,228,217,0.5);
+    border-left: 2px solid var(--amber-dim);
+    padding-left: 8px;
+    margin-bottom: 10px;
+    line-height: 1.7;
+  }
+
+  .wbc-exp-domains { display: flex; flex-direction: column; gap: 6px; }
+
+  .wbc-domain-row { }
+
+  .wbc-domain-label {
+    font-family: 'Cinzel', serif;
+    font-size: 8px;
+    letter-spacing: 0.2em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .wbc-domain-pct { font-size: 8px; color: var(--amber-dim); }
+
+  .wbc-domain-terms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+
+  .wbc-hebrew {
+    font-family: 'Noto Sans Hebrew', sans-serif;
+    font-size: 18px;
+    color: var(--amber-bright);
+    direction: rtl;
+  }
+
+  .wbc-roman { font-size: 11px; color: rgba(232,228,217,0.6); letter-spacing: 0.08em; }
+  .wbc-approx { font-size: 10px; color: var(--amber-dim); font-style: italic; }
+
+  /* SENTENCE DOMAIN RESONANCE */
+  .sentence-domain-block {
+    padding: 14px 20px;
+    border-bottom: 1px solid rgba(200,146,42,0.06);
+    direction: ltr;
+  }
+
+  .sentence-domain-block:last-child { border-bottom: none; }
+
+  .domain-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .domain-name {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+
+  .density-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .density-bar { width: 80px; height: 3px; background: rgba(200,146,42,0.1); border-radius: 2px; overflow: hidden; }
+  .density-fill { height: 100%; background: var(--amber); border-radius: 2px; transition: width 0.6s ease; }
+  .density-pct { font-size: 10px; color: var(--amber-dim); min-width: 28px; }
+
+  .domain-section-label {
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  .term-list { font-size: 11px; line-height: 1.7; color: rgba(232,228,217,0.6); margin-bottom: 8px; }
+  .term-list.intersection-terms { color: var(--amber-bright); }
+
+  .term-pill {
+    display: inline-block;
+    background: rgba(200,146,42,0.1);
+    border: 1px solid rgba(200,146,42,0.28);
+    border-radius: 2px;
+    padding: 1px 6px;
+    margin: 2px 2px;
+    font-size: 10px;
+    color: var(--amber-bright);
+  }
+
+  .term-pill.union-pill {
+    background: transparent;
+    border-color: rgba(200,146,42,0.1);
+    color: rgba(232,228,217,0.4);
+  }
+
+  .empty-msg { font-size: 10px; color: var(--dim); font-style: italic; }
+
+  /* AXIS CHIPS */
+  .axis-chip {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--amber-dim);
+    border: 1px solid rgba(200,146,42,0.12);
+    padding: 1px 7px;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+
+  .axis-chip.resonant {
+    color: var(--amber);
+    border-color: rgba(200,146,42,0.38);
+    background: rgba(200,146,42,0.07);
+  }
+
+  .footer {
+    text-align: center;
+    padding: 40px 0 20px;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    direction: ltr;
+  }
+
+  * { scrollbar-width: thin; scrollbar-color: var(--amber-dim) transparent; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-title">Mashet Sentence Engine</div>
+    <div class="header-formula" dir="ltr">
+      [(<span>א</span>–<span>ת</span>)<sup>n</sup>]
+      + [(<span>א</span>–<span>ת</span>)<sup>n</sup>]
+      + [(<span>א</span>–<span>ת</span>)<sup>n</sup>]
+      + …
+    </div>
+  </div>
+
+  <!-- SENTENCE BAR -->
+  <div class="sentence-bar" id="sentenceBar">
+    <div class="sentence-bar-label">sentence composition</div>
+    <div class="sentence-empty" id="sentenceEmpty">— build your first word below —</div>
+  </div>
+
+  <!-- ACTIVE WORD BUILDER -->
+  <div class="word-builder" id="wordBuilder">
+    <div class="word-builder-header">
+      <div class="word-builder-label" id="wbLabel">Word 1</div>
+      <div class="word-builder-glyphs" id="wbGlyphs">—</div>
+      <div class="word-builder-dim" id="wbDim">— select a glyph —</div>
+    </div>
+    <div class="substrate-stack" id="substrateStack"></div>
+    <div class="word-controls">
+      <button class="ctrl-btn" onclick="wbUndo()">← Undo</button>
+      <button class="ctrl-btn primary" onclick="wbResolve()">Resolve Word</button>
+      <button class="ctrl-btn commit" onclick="wbCommit()">+ Commit Word →</button>
+      <button class="ctrl-btn" onclick="wbClear()">Clear</button>
+    </div>
+    <div class="word-resonance-inline" id="wordResonanceInline"></div>
+  </div>
+
+  <!-- SENTENCE CONTROLS -->
+  <div class="sentence-controls">
+    <button class="ctrl-btn primary" onclick="resolveSentence()" id="btnResolveSentence" disabled>⬡ Resolve Sentence</button>
+    <button class="ctrl-btn" onclick="resetAll()">Reset All</button>
+  </div>
+
+  <!-- SENTENCE RESONANCE PANEL -->
+  <div class="sentence-panel" id="sentencePanel">
+    <div class="sentence-panel-header">
+      <div class="sp-title">Sentence Resonance Readout</div>
+      <div class="sp-tag" id="spTag"></div>
+    </div>
+    <div class="sentence-definition-block" id="sentenceDefinitionBlock">
+      <div class="sentence-def-header">
+        <div class="sentence-def-label">Sentence Field Definition</div>
+        <div class="definition-badge">AI · Claude</div>
+      </div>
+      <div class="sentence-def-content" id="sentenceDefContent">
+        <div class="wri-approx wri-loading"><span class="approx-symbol">≈</span><span class="loading-pulse">awaiting resolution…</span></div>
+        <div class="wri-def" style="color:var(--amber-dim);font-style:italic;min-height:36px"></div>
+      </div>
+    </div>
+    <div class="sentence-phonetic-block" id="sentencePhoneticBlock"></div>
+    <div id="sentenceDomainBody"></div>
+  </div>
+
+  <div class="footer">MASHET · SENTENCE ENGINE · (א–ת)ⁿ × W · ⊕ NULL DECOHERENCE OPERATOR · 1/23</div>
+</div>
+
+<!-- NULL OPERATOR MAP OVERLAY -->
+<div class="null-map-overlay" id="nullMapOverlay">
+  <div class="null-map-panel">
+    <div class="null-map-header">
+      <div>
+        <div class="null-map-title">Null Cell — Decoherence Operator</div>
+        <div class="null-map-sub">1/23 · State Resolution Filter · Select function:</div>
+      </div>
+      <button class="null-map-close" onclick="closeNullMap()">✕</button>
+    </div>
+    <div class="null-op-list">
+      <div class="null-op-item" onclick="applyNullOp('space')">
+        <div class="null-op-sym">␣</div>
+        <div class="null-op-body">
+          <div class="null-op-name">Space — Entanglement Diffusion</div>
+          <div class="null-op-desc">Commits the current word-substrate and opens a new (א–ת)ⁿ word engine. The preceding field diffuses into the sentence, maintaining coherent potential for the next cluster.</div>
+        </div>
+        <div class="null-op-key">SPACE</div>
+      </div>
+      <div class="null-op-item" onclick="applyNullOp('period')">
+        <div class="null-op-sym">.</div>
+        <div class="null-op-body">
+          <div class="null-op-name">Period — Terminal Collapse</div>
+          <div class="null-op-desc">Fixes the current sentence state into Ground Truth. Finalizes the sentence field and opens a new sentence context. Maximum decoherence event.</div>
+        </div>
+        <div class="null-op-key">PERIOD</div>
+      </div>
+      <div class="null-op-item" onclick="applyNullOp('question')">
+        <div class="null-op-sym">?</div>
+        <div class="null-op-body">
+          <div class="null-op-name">Question — Superposition Maintained</div>
+          <div class="null-op-desc">Marks the preceding word as unresolved — state resolution is pending further input. Word remains in superposition; visually flagged as dashed-border potential state.</div>
+        </div>
+        <div class="null-op-key">QUERY</div>
+      </div>
+      <div class="null-op-item" onclick="applyNullOp('exclaim')">
+        <div class="null-op-sym">!</div>
+        <div class="null-op-body">
+          <div class="null-op-name">Exclamation — High-Energy Inversion</div>
+          <div class="null-op-desc">Flips the resonance polarity of the preceding word. Mirror function: the word commits but with inverted emotional/elemental axis. High-entropy collapse event.</div>
+        </div>
+        <div class="null-op-key">INVERT</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  MASHET SUBSTRATE DATA
+// ═══════════════════════════════════════════════════════════════════
+const MASHET = {
+  "א": {"Grammar":["Noun","Pronoun","Subject","Agent","Singular","Masculine","Abstract"],"Elemental":["Air","Water"],"Math":["Addition","Identity","Sequence","Unity","Beginning","Cardinal","Point","Increment","Function","Sum","Set","Variable","Prime","Factor","Count","Ratio","Zero","Placeholder","Operator","Parentheses","Exponent","Root","Coefficient","Element","Interval"],"Science":["Energy","Force","Particle","Wave","Potential","Quantum","Field","Mass","Gravity","Motion","Light","Charge","Atom","Proton","Neutron","Electron","Spectrum","Oscillation","Spin","Momentum","Conservation","Vector","Radiation","Frequency","Entropy"],"Corporeal":["Head","Brain","Eyes","Ears","Breath","Face","Mouth","Tongue","Nose","Skull","Neck","Spine","Expression","Jaw","Forehead","Thought","Vision","Perception","Hearing","Speech","Cognitive","Sensory","Awareness","Pulse","Mind"],"Emotional":["Joy","Curiosity","Wonder","Awe","Excitement","Optimism","Anticipation","Motivation","Inspiration","Hope","Confidence","Playfulness","Enthusiasm","Delight","Interest","Creativity","Surprise","Engagement","Alertness","Energy","Passion","Aliveness","Reflection","Insight"]},
+  "ב": {"Grammar":["Noun","Object","Complement","Preposition","Singular","Feminine","Concrete"],"Elemental":["Water","Earth"],"Math":["Subtraction","Difference","Boundary","Containment","Ratio","Area","Segment","Fraction","Division","Set","Vector","Constant","Multiplier","Base","Function","Complement","Interval","Bound","Modulus","Limit","Sum","Sequence","Coefficient","Zero","Operator"],"Science":["Molecule","Solution","Fluid","Flow","Density","Pressure","Buoyancy","Volume","Mass","Force","Energy","Atom","Reaction","Diffusion","Membrane","Ion","Concentration","Gravity","Cycle","Current","Heat","Conductivity","Magnetism","Charge","Entropy"],"Corporeal":["Chest","Heart","Lungs","Ribcage","Circulation","Breathing","Sternum","Upper Body","Throat","Voice","Oxygenation","Heartbeat","Pulse","Emotion","Expression","Strength","Protection","Vitality","Thorax","Breath","Sensory","Motion","Support","Posture"],"Emotional":["Nurturance","Compassion","Care","Safety","Protection","Comfort","Love","Attachment","Empathy","Affection","Warmth","Stability","Security","Gratitude","Devotion","Trust","Patience","Tolerance","Tenderness","Contentment","Harmony","Calm","Support","Relief","Reassurance"]},
+  "ג": {"Grammar":["Verb","Transitive","Active","Predicate","Past","Third Person"],"Elemental":["Fire","Air"],"Math":["Multiplication","Product","Factor","Coefficient","Ratio","Power","Function","Exponent","Operator","Sum","Segment","Increment","Set","Vector","Bound","Base","Derivative","Function Composition","Interval","Cardinality","Permutation","Combination","Modulus","Root","Difference"],"Science":["Combustion","Heat","Fire","Energy","Reaction","Plasma","Temperature","Force","Acceleration","Pressure","Radiation","Velocity","Momentum","Mass","Wave","Photon","Electron","Neutron","Particle","Friction","Work","Power","Field","Vector","Oscillation"],"Corporeal":["Arms","Hands","Fingers","Grasping","Action","Manipulation","Dexterity","Strength","Motion","Reach","Flexion","Extension","Gesture","Pressure","Tool Use","Grip","Coordination","Energy","Force","Movement","Contact","Interaction","Push","Pull","Extension"],"Emotional":["Action","Drive","Ambition","Assertiveness","Initiative","Determination","Courage","Boldness","Energy","Motivation","Confidence","Adventure","Leadership","Willpower","Risk-taking","Challenge","Enthusiasm","Passion","Focus","Strength","Engagement","Force","Dynamism"]},
+  "ד": {"Grammar":["Verb","Intransitive","Auxiliary","Mood: Indicative","Future","Second Person"],"Elemental":["Earth","Water"],"Math":["Division","Quotient","Fraction","Modulus","Ratio","Function","Limit","Sum","Product","Segment","Increment","Base","Operator","Interval","Set","Bound","Cardinality","Difference","Coefficient","Root","Derivative","Permutation","Complement","Element","Exponent"],"Science":["Solid","Structure","Density","Pressure","Mass","Volume","Force","Gravity","Molecule","Atom","Crystal","Tension","Stress","Friction","Inertia","Stability","Torque","Energy","Heat","Conductivity","Motion","Vector","Oscillation","Wave","Frequency"],"Corporeal":["Legs","Feet","Toes","Walking","Running","Support","Stability","Balance","Standing","Flexion","Extension","Grounding","Motion","Endurance","Strength","Posture","Gait","Propulsion","Locomotion","Agility","Pressure","Contact","Weight","Base"],"Emotional":["Patience","Endurance","Resilience","Stability","Responsibility","Persistence","Reliability","Discipline","Composure","Practicality","Groundedness","Acceptance","Tolerance","Perseverance","Fortitude","Steadfastness","Trustworthiness","Care","Diligence","Planning","Prudence","Order","Structure","Support"]},
+  "ה": {"Grammar":["Article","Definite","Modifier","Clause: Independent","Singular","Demonstrative"],"Elemental":["Air","Fire"],"Math":["Exponentiation","Power","Root","Function","Increment","Sequence","Operator","Ratio","Sum","Product","Base","Interval","Factor","Cardinal","Set","Limit","Derivative","Coefficient","Fraction","Permutation","Combination","Modulus","Complement","Element","Zero","Segment"],"Science":["Light","Photon","Optics","Spectrum","Wave","Reflection","Refraction","Energy","Force","Motion","Electromagnetic","Radiation","Oscillation","Frequency","Quantum","Particle","Electron","Magnetism","Charge","Momentum","Potential","Field","Spin","Diffraction"],"Corporeal":["Lungs","Breath","Vocal Cords","Speaking","Airflow","Inspiration","Exhalation","Voice","Sound","Expression","Breath Control","Throat","Chest","Energy","Communication","Singing","Intonation","Speech","Resonance","Pulmonary","Respiratory","Pressure","Rhythm","Flow"],"Emotional":["Inspiration","Awe","Spirituality","Aspiration","Intuition","Imagination","Creativity","Reverence","Wonder","Awareness","Mindfulness","Reflection","Insight","Curiosity","Hope","Connection","Motivation","Vision","Gratitude","Enlightenment","Contemplation","Openness"]},
+  "ו": {"Grammar":["Conjunction","Preposition","Modifier","Object","Instrument"],"Elemental":["Water","Air"],"Math":["Function","Variable","Increment","Sequence","Sum","Product","Operator","Ratio","Bound","Interval","Segment","Factor","Derivative","Coefficient","Set","Zero","Root","Limit","Cardinal","Exponent","Base","Fraction","Permutation","Combination","Modulus"],"Science":["Fluid","Flow","Current","Pressure","Volume","Buoyancy","Molecule","Solution","Ion","Diffusion","Energy","Heat","Density","Velocity","Force","Mass","Gravity","Wave","Oscillation","Frequency","Vector","Potential","Conductivity","Friction","Reaction"],"Corporeal":["Hands","Fingers","Grasp","Connection","Touch","Contact","Coordination","Interaction","Reach","Gesture","Dexterity","Manipulation","Holding","Linking","Fine Motor","Pressure","Strength","Sensory","Feedback","Extension","Motion","Flow"],"Emotional":["Connection","Bonding","Harmony","Cooperation","Affection","Empathy","Friendship","Understanding","Unity","Trust","Collaboration","Partnership","Communication","Support","Sharing","Adaptation","Relationship","Reconciliation","Sociability","Balance","Flow","Compromise","Alliance","Teamwork","Interaction"]},
+  "ז": {"Grammar":["Verb","Imperative","Active","Subject","Agent","Singular"],"Elemental":["Fire","Earth"],"Math":["Factor","Multiple","Divisor","Product","Quotient","Sum","Difference","Operator","Sequence","Increment","Set","Ratio","Fraction","Interval","Root","Exponent","Base","Function","Coefficient","Limit","Permutation","Combination","Element","Modulus","Cardinal"],"Science":["Spark","Ignition","Energy","Combustion","Heat","Plasma","Flame","Reaction","Force","Velocity","Acceleration","Power","Work","Photon","Electron","Radiation","Mass","Momentum","Field","Oscillation","Pressure","Temperature","Frequency","Vector","Friction"],"Corporeal":["Spine","Vertebrae","Back","Support","Flexibility","Posture","Stability","Balance","Strength","Core","Alignment","Torque","Motion","Force","Energy","Protection","Skeletal","Structure","Extension","Reflex","Muscular","Adjustment","Load","Center"],"Emotional":["Assertiveness","Courage","Defense","Protection","Ambition","Determination","Drive","Initiative","Strength","Focus","Confidence","Boldness","Willpower","Challenge","Energy","Motivation","Action","Leadership","Vigilance","Awareness","Alertness","Engagement","Force","Persistence","Resilience"]},
+  "ח": {"Grammar":["Adjective","Qualitative","Modifier","Theme","Singular","Feminine"],"Elemental":["Earth","Water"],"Math":["Geometry","Point","Line","Plane","Angle","Triangle","Quadrilateral","Polygon","Circle","Radius","Diameter","Area","Perimeter","Volume","Function","Set","Ratio","Segment","Vector","Coordinate","Exponent","Root","Sum","Product","Operator"],"Science":["Structure","Solid","Crystal","Density","Stress","Tension","Mass","Volume","Stability","Force","Gravity","Inertia","Friction","Energy","Torque","Motion","Conductivity","Wave","Oscillation","Frequency","Vector","Pressure","Molecule","Atom","Bond"],"Corporeal":["Torso","Chest","Abdomen","Core","Strength","Stability","Balance","Protection","Vital Organs","Ribcage","Heart","Lungs","Digestive","Muscle","Support","Posture","Flexion","Extension","Energy","Motion","Breathing","Center","Vitality"],"Emotional":["Safety","Boundaries","Security","Comfort","Stability","Support","Protection","Nurturance","Care","Restraint","Prudence","Tolerance","Patience","Groundedness","Responsibility","Harmony","Balance","Discipline","Structure","Calm","Reliability","Order","Preparedness","Reflection","Acceptance"]},
+  "ט": {"Grammar":["Adjective","Quantitative","Comparative","Modifier","Complement"],"Elemental":["Air","Fire"],"Math":["Algebra","Variable","Coefficient","Expression","Equation","Function","Operator","Polynomial","Factor","Root","Sum","Product","Sequence","Series","Ratio","Fraction","Interval","Bound","Limit","Cardinal","Derivative","Integral","Exponent","Modulus","Set"],"Science":["Air","Gas","Pressure","Flow","Volume","Temperature","Molecule","Particle","Diffusion","Energy","Velocity","Mass","Force","Wave","Radiation","Electromagnetic","Electron","Photon","Oscillation","Frequency","Vector","Field","Conductivity","Buoyancy","Reaction"],"Corporeal":["Head","Brain","Eyes","Mind","Vision","Cognition","Perception","Awareness","Thought","Intuition","Sensory","Focus","Concentration","Reflection","Observation","Intelligence","Forehead","Face","Expression","Attention","Insight","Analysis","Signal","Feedback"],"Emotional":["Clarity","Understanding","Insight","Awareness","Observation","Analysis","Precision","Reflection","Focus","Curiosity","Wisdom","Attention","Perception","Mindfulness","Discernment","Concentration","Learning","Rationality","Comprehension","Judgement","Cognition","Assessment","Investigation"]},
+  "י": {"Grammar":["Pronoun","Personal","Subject","Experiencer","Singular","First Person"],"Elemental":["Water","Air"],"Math":["Sequence","Series","Arithmetic Progression","Geometric Progression","Sum","Product","Increment","Function","Variable","Operator","Factor","Coefficient","Root","Exponent","Interval","Ratio","Set","Limit","Derivative","Integral","Modulus","Base","Cardinal","Fraction","Element"],"Science":["Water","Liquid","Flow","Molecule","Pressure","Density","Buoyancy","Solution","Cycle","Temperature","Volume","Mass","Energy","Force","Reaction","Diffusion","Oscillation","Current","Wave","Velocity","Vector","Frequency","Potential","Conductivity","Ion"],"Corporeal":["Hands","Fingers","Dexterity","Grasping","Manipulation","Fine Motor","Motion","Coordination","Touch","Pressure","Gesture","Interaction","Reach","Holding","Sensory","Feedback","Energy","Skill","Action","Connection","Force","Guidance","Extension","Control"],"Emotional":["Dexterity","Skill","Control","Focus","Coordination","Precision","Creativity","Expression","Adaptability","Agility","Sensitivity","Awareness","Engagement","Energy","Motivation","Action","Initiative","Confidence","Playfulness","Attention","Responsiveness","Finesse","Tact","Care","Craftsmanship"]},
+  "כ": {"Grammar":["Verb","Transitive","Middle Voice","Predicate","Mood: Subjunctive"],"Elemental":["Fire","Earth"],"Math":["Operator","Function","Derivative","Integral","Sequence","Series","Sum","Product","Ratio","Factor","Coefficient","Root","Exponent","Interval","Limit","Bound","Set","Fraction","Modulus","Base","Cardinal","Permutation","Combination","Segment","Element"],"Science":["Force","Energy","Work","Acceleration","Mass","Momentum","Torque","Vector","Field","Gravity","Potential","Kinetic","Power","Motion","Pressure","Velocity","Friction","Oscillation","Wave","Frequency","Radiation","Electron","Photon","Particle","Spin"],"Corporeal":["Palm","Hand","Grip","Force","Strength","Dexterity","Motion","Support","Pressure","Touch","Contact","Manipulation","Gesture","Coordination","Holding","Tool Use","Interaction","Energy","Extension","Reach","Push","Pull","Action","Guidance"],"Emotional":["Strength","Grasp","Holding","Control","Support","Force","Discipline","Responsibility","Protection","Care","Focus","Precision","Reliability","Coordination","Action","Dexterity","Endurance","Stability","Energy","Persistence","Engagement","Groundedness","Initiative","Leadership","Determination"]},
+  "ל": {"Grammar":["Preposition","Conjunction","Object","Beneficiary","Phrase: Noun Phrase"],"Elemental":["Earth","Air"],"Math":["Logic","Proposition","Truth","False","And","Or","Not","If-Then","Equivalence","Quantifier","Variable","Function","Operator","Set","Subset","Union","Intersection","Complement","Cardinal","Sequence","Series","Increment","Limit","Bound","Ratio","Coefficient"],"Science":["Growth","Life","Cell","Organism","DNA","Gene","Molecule","Protein","Evolution","Adaptation","Reproduction","Energy","Force","Metabolism","Cycle","Homeostasis","Signal","Reaction","Structure","Membrane","Ion","Diffusion","Respiration","Photosynthesis","Enzyme"],"Corporeal":["Legs","Feet","Knees","Thighs","Support","Motion","Walking","Running","Balance","Stability","Propulsion","Endurance","Locomotion","Grounding","Flexion","Extension","Agility","Strength","Posture","Gait","Movement","Contact","Load","Base","Core"],"Emotional":["Growth","Aspiration","Learning","Expansion","Exploration","Progress","Curiosity","Patience","Development","Adaptation","Guidance","Mentoring","Leadership","Insight","Awareness","Observation","Planning","Understanding","Engagement","Responsibility","Wisdom","Vision","Strategy"]},
+  "מ": {"Grammar":["Noun","Abstract","Complement","Modifier","Clause: Dependent"],"Elemental":["Water","Earth"],"Math":["Number","Integer","Rational","Real","Imaginary","Complex","Prime","Factor","Divisor","Sum","Product","Sequence","Series","Function","Operator","Root","Exponent","Fraction","Ratio","Limit","Interval","Cardinal","Set","Coefficient","Modulus"],"Science":["Water","Liquid","Flow","Molecule","Density","Volume","Pressure","Buoyancy","Cycle","Diffusion","Ion","Conductivity","Energy","Mass","Force","Wave","Velocity","Temperature","Reaction","Current","Frequency","Vector","Gravity","Heat","Solution"],"Corporeal":["Torso","Chest","Abdomen","Core","Lungs","Heart","Vital Organs","Circulation","Respiration","Strength","Support","Stability","Flexion","Extension","Energy","Posture","Center","Breathing","Vitality","Protection","Ribcage","Force","Motion","Balance"],"Emotional":["Nurturance","Emotion","Care","Compassion","Support","Protection","Vitality","Connection","Comfort","Empathy","Stability","Harmony","Balance","Safety","Acceptance","Security","Understanding","Affection","Peace","Warmth","Trust","Gratitude","Love","Tenderness","Reflection"]},
+  "נ": {"Grammar":["Pronoun","Relative","Object","Theme","Singular","Third Person"],"Elemental":["Air","Water"],"Math":["Probability","Statistic","Mean","Median","Mode","Variance","Standard Deviation","Distribution","Random","Function","Operator","Ratio","Fraction","Sequence","Increment","Interval","Set","Cardinal","Limit","Bound","Coefficient","Factor","Root","Exponent","Modulus"],"Science":["Gas","Air","Flow","Pressure","Volume","Molecule","Particle","Velocity","Diffusion","Temperature","Energy","Force","Mass","Wave","Oscillation","Electron","Photon","Radiation","Electromagnetic","Field","Vector","Frequency","Reaction","Conductivity","Buoyancy"],"Corporeal":["Eyes","Ears","Brain","Cognition","Perception","Sensory","Awareness","Observation","Focus","Mind","Thought","Insight","Signal","Vision","Hearing","Attention","Reflection","Intuition","Feedback","Analysis","Detection","Processing","Monitoring"],"Emotional":["Observation","Awareness","Sensitivity","Perception","Attention","Insight","Curiosity","Mindfulness","Reflection","Focus","Alertness","Discernment","Cognition","Understanding","Comprehension","Analysis","Detection","Prudence","Learning","Vigilance","Assessment","Judgement","Monitoring"]},
+  "ס": {"Grammar":["Verb","Auxiliary","Imperfective","Predicate","Aspect: Progressive"],"Elemental":["Fire","Earth"],"Math":["Set","Subset","Union","Intersection","Complement","Element","Cardinality","Function","Operator","Sequence","Series","Sum","Product","Interval","Bound","Ratio","Factor","Coefficient","Root","Exponent","Fraction","Limit","Modulus","Permutation","Combination"],"Science":["Energy","Work","Power","Force","Acceleration","Mass","Momentum","Vector","Potential","Kinetic","Field","Torque","Motion","Pressure","Velocity","Oscillation","Wave","Frequency","Electron","Photon","Radiation","Temperature","Friction","Spin","Conservation"],"Corporeal":["Spine","Back","Core","Support","Balance","Stability","Strength","Vertebrae","Flexion","Extension","Alignment","Motion","Posture","Protection","Center","Energy","Torque","Reflex","Muscular","Skeletal","Load","Adjustment","Movement","Base"],"Emotional":["Stability","Support","Structure","Reliability","Groundedness","Endurance","Security","Strength","Protection","Resilience","Balance","Patience","Discipline","Prudence","Fortitude","Tolerance","Preparedness","Care","Composure","Steadfastness","Calm","Assurance","Responsibility"]},
+  "ע": {"Grammar":["Noun","Proper","Subject","Agent","Singular","Masculine"],"Elemental":["Earth","Water"],"Math":["Vector","Vector Space","Magnitude","Direction","Sum","Product","Function","Operator","Increment","Interval","Ratio","Segment","Root","Exponent","Factor","Coefficient","Limit","Bound","Set","Sequence","Series","Permutation","Combination","Element","Modulus"],"Science":["Observation","Measurement","Sensor","Spectrum","Light","Optics","Photon","Electron","Field","Energy","Wave","Radiation","Frequency","Particle","Mass","Force","Motion","Velocity","Potential","Oscillation","Vector","Temperature","Pressure","Conductivity","Signal"],"Corporeal":["Eyes","Face","Observation","Perception","Awareness","Vision","Mind","Cognition","Insight","Focus","Reflection","Attention","Thought","Signal","Sensory","Monitoring","Processing","Analysis","Detection","Understanding","Clarity","Perspective"],"Emotional":["Vision","Insight","Awareness","Observation","Reflection","Intuition","Understanding","Perspective","Discernment","Clarity","Wisdom","Mindfulness","Sensitivity","Cognition","Comprehension","Assessment","Analysis","Judgment","Perception","Learning","Prudence","Evaluation"]},
+  "פ": {"Grammar":["Interjection","Modifier","Clause: Independent","Experiencer"],"Elemental":["Air","Fire"],"Math":["Fraction","Ratio","Division","Quotient","Operator","Function","Sum","Product","Sequence","Increment","Root","Exponent","Factor","Coefficient","Limit","Interval","Bound","Set","Cardinal","Permutation","Combination","Modulus","Series","Element","Zero"],"Science":["Expression","Communication","Signal","Wave","Frequency","Vibration","Oscillation","Energy","Force","Light","Sound","Pressure","Particle","Electron","Photon","Magnetic","Electric","Field","Velocity","Mass","Motion","Momentum","Potential","Reaction","Vector"],"Corporeal":["Mouth","Tongue","Vocal Cords","Speech","Voice","Breath","Exhalation","Articulation","Expression","Communication","Singing","Sound","Intonation","Resonance","Speech Control","Throat","Breathing","Airflow","Energy","Voice Projection","Pulse","Sound Wave"],"Emotional":["Expression","Communication","Speech","Voice","Creativity","Articulation","Intuition","Clarity","Persuasion","Assertiveness","Confidence","Emotion","Connection","Sharing","Interaction","Playfulness","Resonance","Social","Motivation","Engagement"]},
+  "צ": {"Grammar":["Verb","Intransitive","Active","Predicate","Aspect: Perfective"],"Elemental":["Water","Earth"],"Math":["Integral","Derivative","Function","Operator","Sequence","Series","Sum","Product","Ratio","Factor","Coefficient","Root","Exponent","Limit","Interval","Bound","Set","Fraction","Modulus","Base","Cardinal","Permutation","Combination","Segment","Element"],"Science":["Adaptation","Evolution","Survival","Growth","Life","Organism","Cell","DNA","Gene","Protein","Metabolism","Energy","Force","Cycle","Reaction","Homeostasis","Structure","Membrane","Respiration","Photosynthesis","Ion","Diffusion","Enzyme","Signal","Conductivity"],"Corporeal":["Legs","Feet","Toes","Motion","Walking","Running","Balance","Stability","Propulsion","Support","Endurance","Flexion","Extension","Agility","Posture","Locomotion","Grounding","Contact","Core","Strength","Energy","Force","Base"],"Emotional":["Motion","Agility","Endurance","Balance","Persistence","Resilience","Strength","Energy","Flexibility","Adaptation","Action","Coordination","Initiative","Engagement","Focus","Drive","Effort","Determination","Movement","Stability","Grounding","Stamina","Locomotion"]},
+  "ק": {"Grammar":["Conjunction","Preposition","Clause: Dependent","Modifier"],"Elemental":["Fire","Air"],"Math":["Exponent","Logarithm","Root","Function","Operator","Sum","Product","Sequence","Series","Increment","Factor","Coefficient","Interval","Ratio","Bound","Limit","Set","Fraction","Modulus","Base","Cardinal","Permutation","Combination","Element","Zero"],"Science":["Vision","Observation","Light","Photon","Spectrum","Energy","Frequency","Wave","Electron","Particle","Radiation","Field","Oscillation","Velocity","Potential","Vector","Measurement","Force","Mass","Motion","Spin","Reflection","Refraction","Optics"],"Corporeal":["Head","Brain","Eyes","Vision","Cognition","Observation","Awareness","Perception","Mind","Thought","Insight","Signal","Focus","Reflection","Attention","Understanding","Monitoring","Analysis","Perspective","Detection","Clarity"],"Emotional":["Vision","Awareness","Observation","Insight","Focus","Clarity","Cognition","Perception","Mindfulness","Attention","Reflection","Wisdom","Evaluation","Understanding","Discernment","Learning","Prudence","Perspective","Monitoring","Assessment","Judgment","Vigilance"]},
+  "ר": {"Grammar":["Adjective","Demonstrative","Complement","Modifier","Singular","Feminine"],"Elemental":["Earth","Air"],"Math":["Geometry","Angle","Triangle","Quadrilateral","Polygon","Circle","Radius","Diameter","Area","Perimeter","Volume","Segment","Vector","Function","Operator","Sequence","Series","Sum","Product","Ratio","Fraction","Root","Exponent","Coefficient","Modulus"],"Science":["Structure","Stability","Solid","Density","Stress","Force","Mass","Volume","Gravity","Molecule","Crystal","Bond","Tension","Torque","Motion","Energy","Conductivity","Oscillation","Wave","Frequency","Vector","Pressure","Atom","Bonding","Friction"],"Corporeal":["Torso","Chest","Abdomen","Core","Spine","Strength","Stability","Balance","Support","Motion","Flexion","Extension","Posture","Vital Organs","Energy","Center","Force","Protection","Alignment","Ribcage","Lungs","Heart","Base"],"Emotional":["Stability","Strength","Endurance","Support","Balance","Vitality","Security","Protection","Grounding","Structure","Core","Health","Resilience","Fortitude","Responsibility","Reliability","Energy","Centeredness","Composure","Safety","Patience","Perseverance","Harmony"]},
+  "ש": {"Grammar":["Verb","Transitive","Active","Predicate","Agent","Mood: Imperative"],"Elemental":["Fire","Air"],"Math":["Function","Operator","Sequence","Series","Sum","Product","Ratio","Factor","Coefficient","Root","Exponent","Interval","Bound","Limit","Set","Fraction","Permutation","Combination","Modulus","Base","Cardinal","Increment","Element","Derivative","Integral"],"Science":["Transformation","Reaction","Energy","Force","Heat","Combustion","Mass","Momentum","Wave","Particle","Electron","Photon","Plasma","Radiation","Velocity","Pressure","Oscillation","Frequency","Vector","Field","Motion","Potential","Work","Kinetic","Conductivity"],"Corporeal":["Arms","Hands","Fingers","Action","Dexterity","Motion","Force","Strength","Manipulation","Coordination","Reach","Gesture","Fine Motor","Contact","Energy","Extension","Push","Pull","Tool Use","Holding","Connection","Interaction","Guidance","Activity"],"Emotional":["Action","Transformation","Change","Energy","Initiative","Motivation","Drive","Willpower","Force","Courage","Boldness","Determination","Adaptation","Flexibility","Engagement","Leadership","Challenge","Effort","Responsibility","Persistence","Dynamism","Confidence","Passion","Movement"]},
+  "ת": {"Grammar":["Noun","Abstract","Object","Theme","Singular","Feminine"],"Elemental":["Water","Earth"],"Math":["Set","Subset","Union","Intersection","Complement","Element","Cardinality","Function","Operator","Sequence","Series","Sum","Product","Interval","Bound","Ratio","Factor","Coefficient","Root","Exponent","Fraction","Limit","Modulus","Permutation","Combination","Segment"],"Science":["Cycle","Completion","Flow","Energy","Reaction","Motion","Mass","Volume","Force","Pressure","Temperature","Wave","Particle","Molecule","Electron","Photon","Current","Diffusion","Frequency","Vector","Potential","Conductivity","Gravity","Oscillation","Radiation"],"Corporeal":["Legs","Feet","Toes","Walking","Running","Balance","Propulsion","Support","Stability","Endurance","Flexion","Extension","Posture","Motion","Agility","Grounding","Contact","Core","Strength","Energy","Base","Locomotion","Gait","Load","Center"],"Emotional":["Completion","Integration","Flow","Harmony","Balance","Resolution","Fulfillment","Stability","Achievement","Closure","Understanding","Acceptance","Connection","Synthesis","Peace","Calm","Endurance","Responsibility","Grounding","Consolidation","Reflection","Insight","Satisfaction","Alignment","Security"]}
+};
+
+const GLYPHS  = ["א","ב","ג","ד","ה","ו","ז","ח","ט","י","כ","ל","מ","נ","ס","ע","פ","צ","ק","ר","ש","ת"];
+const DOMAINS = ["Grammar","Elemental","Math","Science","Corporeal","Emotional"];
+
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+let committedWords      = [];   // [{glyphs, domainData, phon, approx, state?}]
+let activeGlyphs        = [];   // current word being built
+let sentenceTerminators = [];   // [{index, sym, label}] — null-op markers
+
+// ═══════════════════════════════════════════════════════════════════
+//  PHONETICS
+// ═══════════════════════════════════════════════════════════════════
+const GLYPH_PHONETICS = {
+  'א':{ roman:'',   ipa:'ʔ',  name:'alef'   },
+  'ב':{ roman:'v',  ipa:'v',  name:'vet'    },
+  'ג':{ roman:'g',  ipa:'ɡ',  name:'gimel'  },
+  'ד':{ roman:'d',  ipa:'d',  name:'dalet'  },
+  'ה':{ roman:'h',  ipa:'h',  name:'heh'    },
+  'ו':{ roman:'v',  ipa:'v',  name:'vav'    },
+  'ז':{ roman:'z',  ipa:'z',  name:'zayin'  },
+  'ח':{ roman:'ch', ipa:'χ',  name:'chet'   },
+  'ט':{ roman:'t',  ipa:'t',  name:'tet'    },
+  'י':{ roman:'y',  ipa:'j',  name:'yod'    },
+  'כ':{ roman:'ch', ipa:'χ',  name:'chaf'   },
+  'ל':{ roman:'l',  ipa:'l',  name:'lamed'  },
+  'מ':{ roman:'m',  ipa:'m',  name:'mem'    },
+  'נ':{ roman:'n',  ipa:'n',  name:'nun'    },
+  'ס':{ roman:'s',  ipa:'s',  name:'samech' },
+  'ע':{ roman:'',   ipa:'ʕ',  name:'ayin'   },
+  'פ':{ roman:'f',  ipa:'f',  name:'feh'    },
+  'צ':{ roman:'tz', ipa:'ts', name:'tzadi'  },
+  'ק':{ roman:'k',  ipa:'k',  name:'kof'    },
+  'ר':{ roman:'r',  ipa:'ʁ',  name:'resh'   },
+  'ש':{ roman:'sh', ipa:'ʃ',  name:'shin'   },
+  'ת':{ roman:'t',  ipa:'t',  name:'tav'    }
+};
+
+function buildPronunciation(glyphs) {
+  if (!glyphs.length) return null;
+  let roman='', ipa='';
+  const vowel = 'a';
+  for (let i=0; i<glyphs.length; i++) {
+    const ph = GLYPH_PHONETICS[glyphs[i]]; if (!ph) continue;
+    const isLast = i===glyphs.length-1;
+    const isSilent = ph.roman==='';
+    if (!isSilent) {
+      roman+=ph.roman; ipa+=ph.ipa;
+      if (!isLast) {
+        const nph = GLYPH_PHONETICS[glyphs[i+1]];
+        if (!nph || nph.roman!=='') { roman+=vowel; ipa+='a'; }
+      }
+    } else {
+      if (i===0 && i<glyphs.length-1) { roman+=vowel; ipa+='a'; }
+    }
+  }
+  roman = roman.replace(/aa/g,'a').replace(/([aeiou])\1/g,'$1');
+  ipa   = ipa.replace(/aa/g,'a').replace(/([aeiouæœɪʏʊɛɔə])\1/g,'$1');
+  const lvi = roman.search(/[aeiou][^aeiou]*$/);
+  const stressed = lvi!==-1 ? roman.slice(0,lvi)+'ˈ'+roman.slice(lvi) : roman;
+  return {
+    romanized: stressed||roman,
+    ipa: '/'+ipa+'/',
+    letters: glyphs.map(g=>GLYPH_PHONETICS[g]?.name||g).join('-')
+  };
+}
+
+// Sentence-level: words separated by spaces
+function buildSentencePronunciation(words) {
+  const parts = words.map(w => buildPronunciation(w.glyphs));
+  return {
+    romanized: parts.map(p=>p?.romanized||'?').join('  '),
+    ipa: parts.map(p=>p?.ipa||'/?/').join('  ')
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ENGLISH APPROXIMATION
+// ═══════════════════════════════════════════════════════════════════
+const GLYPH_CORES = {
+  'א':{ primary:'origin',       alts:['breath','being','first']         },
+  'ב':{ primary:'house',        alts:['container','interior','dwelling'] },
+  'ג':{ primary:'lifting',      alts:['pride','stride','carrying']       },
+  'ד':{ primary:'door',         alts:['threshold','passage','opening']   },
+  'ה':{ primary:'breath',       alts:['revelation','the','presence']     },
+  'ו':{ primary:'hook',         alts:['connection','and','joining']      },
+  'ז':{ primary:'weapon',       alts:['cutting','edge','arrow']          },
+  'ח':{ primary:'fence',        alts:['boundary','enclosure','protection']},
+  'ט':{ primary:'coil',         alts:['surround','basket','vessel']      },
+  'י':{ primary:'hand',         alts:['deed','point','work']             },
+  'כ':{ primary:'palm',         alts:['capacity','cupping','holding']    },
+  'ל':{ primary:'staff',        alts:['learning','toward','aspiration']  },
+  'מ':{ primary:'water',        alts:['flow','source','depth']           },
+  'נ':{ primary:'fish',         alts:['emergence','motion','life']       },
+  'ס':{ primary:'support',      alts:['prop','cycle','surrounding']      },
+  'ע':{ primary:'eye',          alts:['sight','source','well']           },
+  'פ':{ primary:'mouth',        alts:['speech','opening','expression']   },
+  'צ':{ primary:'hook',         alts:['righteousness','pull','intent']   },
+  'ק':{ primary:'back of head', alts:['cycle','sun','behind']            },
+  'ר':{ primary:'head',         alts:['chief','beginning','person']      },
+  'ש':{ primary:'teeth',        alts:['fire','sharp','consume']          },
+  'ת':{ primary:'mark',         alts:['seal','covenant','completion']    }
+};
+
+const DOMAIN_WEIGHT = { Emotional:1.6, Corporeal:1.4, Science:1.0, Math:0.8, Grammar:0.6, Elemental:1.2 };
+
+function inferEnglishApprox(glyphs, domainData) {
+  if (glyphs.length===1) {
+    const c=GLYPH_CORES[glyphs[0]]; return c?[c.primary,...c.alts.slice(0,2)]:[glyphs[0]];
+  }
+  const scores={};
+  domainData.forEach(d=>{
+    const w=DOMAIN_WEIGHT[d.domain]||1;
+    d.intersection.forEach(t=>{scores[t]=(scores[t]||0)+w*2;});
+    d.union.forEach(t=>{scores[t]=(scores[t]||0)+w*0.3;});
+  });
+  glyphs.forEach(g=>{
+    const c=GLYPH_CORES[g]; if(!c) return;
+    scores[c.primary]=(scores[c.primary]||0)+3;
+    c.alts.forEach(a=>{scores[a]=(scores[a]||0)+1.5;});
+  });
+  const ranked=Object.entries(scores).sort((a,b)=>b[1]-a[1])
+    .map(([t])=>t.toLowerCase()).filter(t=>t.length<=18&&!t.includes(':')&&!t.includes('('));
+  const seen=new Set(), top=[];
+  for(const t of ranked){
+    const base=t.replace(/s$/,'').replace(/ing$/,'').replace(/ion$/,'');
+    if(!seen.has(base)){seen.add(base);top.push(t);}
+    if(top.length>=3) break;
+  }
+  return top.length?top:['undefined'];
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DOMAIN INTERSECTION ENGINE
+// ═══════════════════════════════════════════════════════════════════
+function computeWordDomains(glyphs) {
+  return DOMAINS.map(domain=>{
+    const arrays = glyphs.map(g=>MASHET[g][domain]||[]);
+    let intersection = arrays[0]?[...arrays[0]]:[];
+    arrays.slice(1).forEach(arr=>{intersection=intersection.filter(t=>arr.includes(t));});
+    const union = [...new Set(arrays.flat())];
+    const pct = Math.round(union.length>0?intersection.length/union.length*100:0);
+    return {domain,intersection,union,pct};
+  });
+}
+
+// Sentence-level: intersect across ALL words' union fields per domain
+function computeSentenceDomains(words) {
+  return DOMAINS.map(domain=>{
+    // Each word contributes its full domain union
+    const wordFields = words.map(w=>{
+      const d=w.domainData.find(d=>d.domain===domain);
+      return d?d.union:[];
+    });
+    let intersection=[...wordFields[0]||[]];
+    wordFields.slice(1).forEach(f=>{intersection=intersection.filter(t=>f.includes(t));});
+    const union=[...new Set(wordFields.flat())];
+    const pct=Math.round(union.length>0?intersection.length/union.length*100:0);
+    return {domain,intersection,union,pct};
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  ROW BUILDER
+// ═══════════════════════════════════════════════════════════════════
+function toSuperscript(n){
+  const s=['⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹'];
+  return String(n).split('').map(d=>s[parseInt(d)]).join('');
+}
+
+function buildRow(rowIndex){
+  const row=document.createElement('div');
+  row.className='substrate-row'; row.id=`row-${rowIndex}`;
+  const label=document.createElement('div');
+  label.className=`row-label ${rowIndex===0?'active-label':''}`;
+  label.textContent=`(א–ת)${toSuperscript(rowIndex+1)}`;
+  row.appendChild(label);
+  const gr=document.createElement('div'); gr.className='glyph-row';
+
+  // NULL CELL — always first (rightmost in RTL row)
+  const nullBtn=document.createElement('button');
+  nullBtn.className='glyph-btn null-cell';
+  nullBtn.textContent='(0)';
+  nullBtn.title='Null Cell — Decoherence Operator';
+  nullBtn.onclick=()=>openNullMap();
+  gr.appendChild(nullBtn);
+
+  GLYPHS.forEach(g=>{
+    const btn=document.createElement('button');
+    btn.className='glyph-btn'; btn.textContent=g;
+    btn.onclick=()=>wbSelectGlyph(g,rowIndex,btn);
+    gr.appendChild(btn);
+  });
+  row.appendChild(gr);
+  return row;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  NULL CELL — DECOHERENCE OPERATORS
+// ═══════════════════════════════════════════════════════════════════
+function openNullMap(){
+  document.getElementById('nullMapOverlay').classList.add('active');
+}
+
+function closeNullMap(){
+  document.getElementById('nullMapOverlay').classList.remove('active');
+}
+
+function applyNullOp(type){
+  closeNullMap();
+  switch(type){
+    case 'space':
+      nullOpSpace(); break;
+    case 'period':
+      nullOpPeriod(); break;
+    case 'question':
+      nullOpQuestion(); break;
+    case 'exclaim':
+      nullOpExclaim(); break;
+  }
+}
+
+/* SPACE — commit current word (if any) and open fresh word engine */
+function nullOpSpace(){
+  if(activeGlyphs.length){
+    // commit the current word as-is
+    wbCommit();
+  }
+  // Already reset by wbCommit; just show status
+  showNullStatus('SPACE · Entanglement Diffusion · New (א–ת)ⁿ word engine opened');
+}
+
+/* PERIOD — commit word + add period token + close sentence */
+function nullOpPeriod(){
+  if(activeGlyphs.length) wbCommit();
+  if(!committedWords.length) return;
+  // Add terminal marker
+  sentenceTerminators.push({ index: committedWords.length, sym:'.', label:'TERMINAL COLLAPSE' });
+  renderSentenceBar();
+  showNullStatus('PERIOD · Terminal Collapse · Sentence fixed into Ground Truth');
+  // Enable resolve
+  document.getElementById('btnResolveSentence').disabled=(committedWords.length<2);
+}
+
+/* QUESTION — mark the LAST committed word as superposition */
+function nullOpQuestion(){
+  if(activeGlyphs.length) wbCommit();
+  if(!committedWords.length) return;
+  const last=committedWords[committedWords.length-1];
+  last.state='superposition';
+  sentenceTerminators.push({ index: committedWords.length, sym:'?', label:'SUPERPOSITION' });
+  renderSentenceBar();
+  showNullStatus('? · Superposition Maintained · Preceding word marked as unresolved potential');
+}
+
+/* EXCLAMATION — mark last word as inverted resonance */
+function nullOpExclaim(){
+  if(activeGlyphs.length) wbCommit();
+  if(!committedWords.length) return;
+  const last=committedWords[committedWords.length-1];
+  last.state='inverted';
+  sentenceTerminators.push({ index: committedWords.length, sym:'!', label:'INVERSION' });
+  renderSentenceBar();
+  showNullStatus('! · High-Energy Inversion · Resonance polarity of preceding word flipped');
+}
+
+function showNullStatus(msg){
+  // show in word-builder dim area
+  const dim=document.getElementById('wbDim');
+  const prev=dim.textContent;
+  dim.textContent='⊕ NULL: '+msg;
+  dim.style.color='var(--amber)';
+  setTimeout(()=>{
+    dim.style.color='';
+    updateWBDisplay();
+  },2800);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  WORD BUILDER LOGIC
+// ═══════════════════════════════════════════════════════════════════
+function wbSelectGlyph(glyph,rowIndex,btn){
+  const row=document.getElementById(`row-${rowIndex}`);
+  row.querySelectorAll('.glyph-btn').forEach(b=>{b.classList.remove('selected');b.disabled=(b!==btn);});
+  btn.classList.add('selected');
+  activeGlyphs[rowIndex]=glyph;
+  if(rowIndex<activeGlyphs.length-1){
+    activeGlyphs=activeGlyphs.slice(0,rowIndex+1);
+    let nr=document.getElementById(`row-${rowIndex+1}`);
+    while(nr){nr.remove();nr=document.getElementById(`row-${rowIndex+1}`);}
+  }
+  updateWBDisplay();
+  document.getElementById('substrateStack').appendChild(buildRow(rowIndex+1));
+  document.getElementById('wordResonanceInline').classList.remove('visible');
+}
+
+function updateWBDisplay(){
+  const n=activeGlyphs.length;
+  document.getElementById('wbGlyphs').textContent=n?activeGlyphs.join(''):'—';
+  document.getElementById('wbLabel').textContent=`Word ${committedWords.length+1}`;
+  document.getElementById('wbDim').textContent=n?`(א–ת)${toSuperscript(n)} · ${n} glyph${n>1?'s':''}`:
+    '— select a glyph —';
+}
+
+function wbUndo(){
+  if(!activeGlyphs.length) return;
+  const last=activeGlyphs.length; const prev=last-1;
+  const er=document.getElementById(`row-${last}`); if(er) er.remove();
+  const pr=document.getElementById(`row-${prev}`);
+  if(pr) pr.querySelectorAll('.glyph-btn').forEach(b=>{b.disabled=false;b.classList.remove('selected');});
+  activeGlyphs.pop();
+  updateWBDisplay();
+  document.getElementById('wordResonanceInline').classList.remove('visible');
+}
+
+function wbClear(){
+  activeGlyphs=[];
+  const stack=document.getElementById('substrateStack');
+  stack.innerHTML=''; stack.appendChild(buildRow(0));
+  updateWBDisplay();
+  document.getElementById('wordResonanceInline').classList.remove('visible');
+}
+
+function wbResolve(){
+  if(!activeGlyphs.length) return;
+  const domainData=computeWordDomains(activeGlyphs);
+  renderWordResonanceInline([...activeGlyphs],domainData);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CLAUDE API — SUBSTRATE DEFINITION ENGINE
+// ═══════════════════════════════════════════════════════════════════
+const GLYPH_NAMES = {'א':'Alef','ב':'Bet','ג':'Gimel','ד':'Dalet','ה':'Heh','ו':'Vav','ז':'Zayin','ח':'Chet','ט':'Tet','י':'Yod','כ':'Kaf','ל':'Lamed','מ':'Mem','נ':'Nun','ס':'Samech','ע':'Ayin','פ':'Peh','צ':'Tzadi','ק':'Qof','ר':'Resh','ש':'Shin','ת':'Tav'};
+
+async function generateDefinition(glyphs, domainData, targetEl) {
+  const word = glyphs.join('');
+  const phon = buildPronunciation(glyphs);
+
+  // Render phonetics immediately (local)
+  const phonHTML = phon ? `
+    <div class="wri-phonetic">
+      ${phon.romanized} <span class="ph-ipa">${phon.ipa}</span>
+      <span style="font-size:9px;letter-spacing:.2em;color:var(--dim);margin-left:8px;text-transform:uppercase">${phon.letters}</span>
+    </div>` : '';
+
+  // Resonant axes
+  const axes = domainData.map(d=>
+    `<span class="axis-chip${d.intersection.length?' resonant':''}">${d.domain}</span>`
+  ).join('');
+
+  targetEl.innerHTML = phonHTML + `
+    <div class="wri-approx wri-loading">
+      <span class="approx-symbol">≈</span><span class="loading-pulse">resolving substrate field…</span>
+    </div>
+    <div class="wri-def" id="def-body-${word}" style="min-height:48px;color:var(--amber-dim);font-style:italic"></div>
+    <div class="wri-axes">${axes}</div>`;
+  targetEl.classList.add('visible');
+
+  const summary = domainData.map(d => {
+    const ix = d.intersection.length ? d.intersection.slice(0,8).join(', ') : 'none';
+    const ux = d.union.slice(0,10).join(', ');
+    return `${d.domain}: shared[${ix}] field[${ux}…]`;
+  }).join('\n');
+
+  const glyphReadout = glyphs.map(g=>`${g} (${GLYPH_NAMES[g]||g})`).join(' + ');
+
+  const prompt = `You are the Mashet Substrate Definition Engine. You interpret combinations of Hebrew letters as computational-linguistic substrate signatures.
+
+The selected letter combination is: ${word}
+Letters: ${glyphReadout}
+
+Their substrate intersection and field data across 6 domains:
+${summary}
+
+Produce a substrate definition in EXACTLY this format (no extra text, no markdown):
+
+APPROX: [1-3 English words that best approximate the meaning, comma-separated — natural English words]
+
+[type signature line: e.g. "[ VERB :: transitive force applied to stable structure ]"]
+
+[2-4 sentences of precise prose defining the substrate meaning from the intersection data]
+
+[resonance mode: 3-6 words]
+
+The APPROX line must be the very first line, followed by a blank line, then the rest.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const raw = data.content?.map(b=>b.text||'').join('') || '';
+    if (!raw) throw new Error('empty');
+
+    const lines = raw.trim().split('\n');
+    let approxWords = [];
+    let bodyLines = [...lines];
+    const approxIdx = lines.findIndex(l=>l.trim().startsWith('APPROX:'));
+    if (approxIdx !== -1) {
+      const approxRaw = lines[approxIdx].replace(/^APPROX:\s*/i,'').trim();
+      approxWords = approxRaw.split(',').map(w=>w.trim()).filter(Boolean);
+      bodyLines = lines.filter((_,i)=>i!==approxIdx);
+      if (bodyLines[0]?.trim()==='') bodyLines.shift();
+    }
+
+    const approxHTML = approxWords.length
+      ? `<span class="approx-symbol">≈</span>${approxWords.map((w,i)=>i===0?`<strong>${w}</strong>`:w).join(' / ')}<span class="approx-note">eng. approx.</span>`
+      : `<span class="approx-symbol">≈</span><span style="color:var(--amber-dim)">—</span>`;
+
+    // Update approx line
+    const approxEl = targetEl.querySelector('.wri-approx');
+    if (approxEl) { approxEl.className='wri-approx'; approxEl.innerHTML=approxHTML; }
+
+    // Update body
+    const bodyEl = targetEl.querySelector(`#def-body-${word}`) || targetEl.querySelector('.wri-def');
+    if (bodyEl) { bodyEl.style.cssText=''; bodyEl.textContent=bodyLines.join('\n').trim(); }
+
+  } catch(err) {
+    const approxEl = targetEl.querySelector('.wri-approx');
+    if (approxEl) approxEl.innerHTML='<span style="color:rgba(200,80,60,0.7);font-size:11px;font-style:italic">definition engine offline</span>';
+    const bodyEl = targetEl.querySelector('.wri-def');
+    if (bodyEl) bodyEl.textContent = '[substrate data available in domain readout below]';
+  }
+}
+
+function renderWordResonanceInline(glyphs, domainData){
+  const panel = document.getElementById('wordResonanceInline');
+  generateDefinition(glyphs, domainData, panel);
+}
+
+function wbCommit(){
+  if(!activeGlyphs.length) return;
+  const glyphs=[...activeGlyphs];
+  const domainData=computeWordDomains(glyphs);
+  const phon=buildPronunciation(glyphs);
+  const approx=inferEnglishApprox(glyphs,domainData);
+
+  committedWords.push({glyphs,domainData,phon,approx});
+  renderSentenceBar();
+
+  // Reset builder for next word
+  activeGlyphs=[];
+  const stack=document.getElementById('substrateStack');
+  stack.innerHTML=''; stack.appendChild(buildRow(0));
+  updateWBDisplay();
+  document.getElementById('wordResonanceInline').classList.remove('visible');
+  document.getElementById('sentencePanel').classList.remove('visible');
+
+  // Enable sentence resolve if ≥2 words
+  document.getElementById('btnResolveSentence').disabled=(committedWords.length<2);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SENTENCE BAR
+// ═══════════════════════════════════════════════════════════════════
+function renderSentenceBar(){
+  const bar=document.getElementById('sentenceBar');
+  bar.innerHTML='<div class="sentence-bar-label">sentence composition</div>';
+  if(!committedWords.length){
+    bar.innerHTML+='<div class="sentence-empty" id="sentenceEmpty">— build your first word below —</div>';
+    return;
+  }
+
+  committedWords.forEach((w,i)=>{
+    // Insert any terminators that precede this word index (after word i-1)
+    sentenceTerminators.filter(t=>t.index===i).forEach(t=>{
+      const chip=document.createElement('div');
+      chip.className='word-token terminator';
+      chip.innerHTML=`<span class="tok-sym">${t.sym}</span><span class="tok-label">${t.label}</span>`;
+      bar.appendChild(chip);
+    });
+
+    const stateClass = w.state==='inverted'?'inverted':w.state==='superposition'?'superposition':'';
+    const tok=document.createElement('div');
+    tok.className='word-token'+(stateClass?' '+stateClass:'');
+    tok.innerHTML=`
+      <span class="tok-hebrew">${w.glyphs.join('')}</span>
+      <span class="tok-phonetic">${w.phon?.romanized||''}</span>
+      <span class="tok-approx">${w.approx[0]||''}</span>
+      <span class="tok-delete" onclick="deleteWord(${i},event)">✕</span>`;
+    bar.appendChild(tok);
+  });
+
+  // Terminators after the last word
+  sentenceTerminators.filter(t=>t.index===committedWords.length).forEach(t=>{
+    const chip=document.createElement('div');
+    chip.className='word-token terminator';
+    chip.innerHTML=`<span class="tok-sym">${t.sym}</span><span class="tok-label">${t.label}</span>`;
+    bar.appendChild(chip);
+  });
+
+  // Add-word button
+  const addBtn=document.createElement('button');
+  addBtn.className='word-add-btn';
+  addBtn.textContent='+ word';
+  addBtn.onclick=()=>{};
+  bar.appendChild(addBtn);
+}
+
+function deleteWord(i,evt){
+  evt.stopPropagation();
+  committedWords.splice(i,1);
+  renderSentenceBar();
+  document.getElementById('sentencePanel').classList.remove('visible');
+  document.getElementById('btnResolveSentence').disabled=(committedWords.length<2);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SENTENCE DEFINITION — AI (sentence-level field synthesis)
+// ═══════════════════════════════════════════════════════════════════
+async function generateSentenceDefinition(words, sentDomains) {
+  const targetEl = document.getElementById('sentenceDefContent');
+
+  const fullHebrew = words.map(w => w.glyphs.join('')).join(' ');
+  const W = words.length;
+  const totalGlyphs = words.reduce((a,w) => a + w.glyphs.length, 0);
+
+  // Word summaries
+  const wordSummaries = words.map((w,i) => {
+    const approx = w.approx?.join(', ') || '—';
+    const glyphNames = w.glyphs.map(g => GLYPH_NAMES[g]||g).join('+');
+    return `Word ${i+1}: ${w.glyphs.join('')} (${glyphNames}) ≈ ${approx}`;
+  }).join('\n');
+
+  // Sentence domain summary
+  const domainSummary = sentDomains.map(d => {
+    const ix = d.intersection.length ? d.intersection.slice(0,6).join(', ') : 'none';
+    return `${d.domain}: shared[${ix}]`;
+  }).join('\n');
+
+  const prompt = `You are the Mashet Substrate Definition Engine operating at the SENTENCE level. You synthesize the combined substrate field of a sequence of Hebrew letter-words into a unified sentence meaning.
+
+Full sentence: ${fullHebrew}
+${W} words · ${totalGlyphs} total glyphs
+
+Word breakdown:
+${wordSummaries}
+
+Sentence-level domain intersections (shared across ALL words):
+${domainSummary}
+
+Produce a sentence-field definition in EXACTLY this format (no extra text, no markdown):
+
+APPROX: [3-6 English words capturing the sentence's unified meaning — like a poetic translation or semantic summary]
+
+[type signature: e.g. "[ SENTENCE FIELD :: emergent motion through bounded awareness ]"]
+
+[3-5 sentences synthesizing what this sequence of substrate words means as a unified field — treat it as a sentence, not just a list of words. What does the combination express?]
+
+[resonance mode: 4-8 words describing the overall energetic/semantic character]
+
+The APPROX line must be the very first line.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await response.json();
+    const raw = data.content?.map(b=>b.text||'').join('') || '';
+    if (!raw) throw new Error('empty');
+
+    const lines = raw.trim().split('\n');
+    let approxWords = [];
+    let bodyLines = [...lines];
+    const approxIdx = lines.findIndex(l => l.trim().startsWith('APPROX:'));
+    if (approxIdx !== -1) {
+      const approxRaw = lines[approxIdx].replace(/^APPROX:\s*/i,'').trim();
+      approxWords = approxRaw.split(',').map(w=>w.trim()).filter(Boolean);
+      bodyLines = lines.filter((_,i) => i !== approxIdx);
+      if (bodyLines[0]?.trim() === '') bodyLines.shift();
+    }
+
+    const approxHTML = approxWords.length
+      ? `<span class="approx-symbol">≈</span>${approxWords.map((w,i)=>i===0?`<strong>${w}</strong>`:w).join(' / ')}<span class="approx-note">sentence field</span>`
+      : `<span class="approx-symbol">≈</span><span style="color:var(--amber-dim)">—</span>`;
+
+    targetEl.innerHTML = `
+      <div class="wri-approx">${approxHTML}</div>
+      <div class="wri-def">${bodyLines.join('\n').trim()}</div>
+      <div class="wri-axes">${sentDomains.map(d=>`<span class="axis-chip${d.intersection.length?' resonant':''}">${d.domain}</span>`).join('')}</div>`;
+
+  } catch(err) {
+    targetEl.innerHTML = `
+      <div class="wri-approx"><span style="color:rgba(200,80,60,0.7);font-size:11px;font-style:italic">definition engine offline</span></div>
+      <div class="wri-def">[sentence substrate data available in domain readout below]</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SENTENCE RESONANCE
+// ═══════════════════════════════════════════════════════════════════
+function resolveSentence(){
+  if(committedWords.length<2) return;
+
+  const sentPanel=document.getElementById('sentencePanel');
+  const spTag=document.getElementById('spTag');
+  const phoneticBlock=document.getElementById('sentencePhoneticBlock');
+  const domainBody=document.getElementById('sentenceDomainBody');
+
+  const W=committedWords.length;
+  spTag.textContent=`${W} words · ${committedWords.reduce((a,w)=>a+w.glyphs.length,0)} glyphs total`;
+
+  // PHONETICS
+  const sentPhon=buildSentencePronunciation(committedWords);
+  const fullHebrew=committedWords.map(w=>w.glyphs.join('')).join(' ');
+
+  // Word breakdown chips — interactive, expandable
+  const breakdownRow = document.createElement('div');
+  breakdownRow.className = 'word-breakdown-row';
+  breakdownRow.id = 'wordBreakdownRow';
+
+  committedWords.forEach((w, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'word-breakdown-chip';
+    chip.dataset.expanded = 'false';
+
+    // Always-visible header
+    const heb = document.createElement('span');
+    heb.className = 'wbc-hebrew'; heb.textContent = w.glyphs.join('');
+    const rom = document.createElement('span');
+    rom.className = 'wbc-roman'; rom.textContent = w.phon?.romanized || '';
+    const apx = document.createElement('span');
+    apx.className = 'wbc-approx'; apx.textContent = w.approx[0] || '';
+    const tog = document.createElement('span');
+    tog.className = 'wbc-toggle'; tog.textContent = '▾ expand';
+
+    chip.append(heb, rom, apx, tog);
+
+    // Expandable resonance panel — content loaded via API on first expand
+    const panel = document.createElement('div');
+    panel.className = 'wbc-expand-panel';
+    panel.dataset.loaded = 'false';
+
+    chip.appendChild(panel);
+
+    // Toggle on click — call API on first expand
+    chip.addEventListener('click', () => {
+      const isExp = chip.dataset.expanded === 'true';
+      chip.dataset.expanded = isExp ? 'false' : 'true';
+      chip.classList.toggle('expanded', !isExp);
+      tog.textContent = isExp ? '▾ expand' : '▴ collapse';
+
+      if (!isExp && panel.dataset.loaded === 'false') {
+        panel.dataset.loaded = 'true';
+        generateDefinition(w.glyphs, w.domainData, panel);
+      }
+    });
+
+    breakdownRow.appendChild(chip);
+  });
+
+  const chips = breakdownRow.outerHTML; // not used directly — we append the node below
+
+  // Sentence-level approx: merge all word approx terms
+  const sentApproxTerms=[...new Set(committedWords.flatMap(w=>w.approx))].slice(0,4);
+
+  phoneticBlock.innerHTML = `
+    <div class="sp-section-label">Full Sentence</div>
+    <div class="sentence-full-hebrew">${fullHebrew}</div>
+    <div class="sentence-romanized">${sentPhon.romanized}</div>
+    <div class="sentence-ipa">${sentPhon.ipa}</div>
+    <div class="sentence-approx-block">
+      <span class="approx-symbol">≈</span>
+      <strong>${sentApproxTerms[0]||''}</strong>${sentApproxTerms.slice(1).map(t=>` / ${t}`).join('')}
+      <span class="approx-note">sentence field approx.</span>
+    </div>
+    <div class="sp-section-label" style="margin-top:14px">Word Breakdown <span style="font-size:8px;color:var(--amber-dim);letter-spacing:.15em">· TAP TO EXPAND</span></div>`;
+  phoneticBlock.appendChild(breakdownRow);
+
+  // DOMAIN RESONANCE across sentence
+  const sentDomains=computeSentenceDomains(committedWords);
+  domainBody.innerHTML='';
+  sentDomains.forEach(d=>{
+    const block=document.createElement('div');
+    block.className='sentence-domain-block';
+    block.innerHTML=`
+      <div class="domain-header">
+        <div class="domain-name">${d.domain}</div>
+        <div class="density-bar-wrap">
+          <div class="density-bar"><div class="density-fill" style="width:${d.pct}%"></div></div>
+          <div class="density-pct">${d.pct}%</div>
+        </div>
+      </div>
+      <div class="domain-section-label">Sentence Resonance (shared across all ${W} words)</div>
+      <div class="term-list intersection-terms">${d.intersection.length
+        ?d.intersection.map(t=>`<span class="term-pill">${t}</span>`).join('')
+        :'<span class="empty-msg">no shared terms across all words</span>'}</div>
+      <div class="domain-section-label">Full Field (sentence union)</div>
+      <div class="term-list">${d.union.map(t=>`<span class="term-pill union-pill">${t}</span>`).join('')}</div>`;
+    domainBody.appendChild(block);
+  });
+
+  // Reset sentence definition block to loading, then fire API
+  const sentDefContent = document.getElementById('sentenceDefContent');
+  sentDefContent.innerHTML = `
+    <div class="wri-approx wri-loading"><span class="approx-symbol">≈</span><span class="loading-pulse">resolving sentence field…</span></div>
+    <div class="wri-def" style="color:var(--amber-dim);font-style:italic;min-height:36px"></div>`;
+  generateSentenceDefinition([...committedWords], sentDomains);
+
+  sentPanel.classList.add('visible');
+  sentPanel.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function resetAll(){
+  committedWords=[];
+  activeGlyphs=[];
+  sentenceTerminators=[];
+  const stack=document.getElementById('substrateStack');
+  stack.innerHTML=''; stack.appendChild(buildRow(0));
+  updateWBDisplay();
+  renderSentenceBar();
+  document.getElementById('wordResonanceInline').classList.remove('visible');
+  document.getElementById('sentencePanel').classList.remove('visible');
+  document.getElementById('btnResolveSentence').disabled=true;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('substrateStack').appendChild(buildRow(0));
+  renderSentenceBar();
+  document.getElementById('nullMapOverlay').addEventListener('click', function(e){
+    if(e.target===this) closeNullMap();
+  });
+});
+</script>
+</body>
+</html>
