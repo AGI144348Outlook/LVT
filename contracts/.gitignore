@@ -1,0 +1,11 @@
+# Node / Hardhat / Foundry
+node_modules/
+cache/
+artifacts/
+out/
+broadcast/
+coverage/
+coverage.json
+typechain/
+typechain-types/
+.env
