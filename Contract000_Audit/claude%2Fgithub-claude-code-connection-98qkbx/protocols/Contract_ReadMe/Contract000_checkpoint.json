@@ -1,15 +1,30 @@
 {
   "schema": "contract000.audit-checkpoint.v1",
   "repository": "AGI144348Outlook/LVT",
-  "represented_branch": "RESOLVE_FROM_PARENT_BRANCH_FOLDER",
+  "represented_branch": "claude/github-claude-code-connection-98qkbx",
+  "source_commit": "bcd5b436008b912806c3b79b5bbfd46a8b05ec39",
   "category": "protocols",
-  "phase": "VERIFY_DIRECTORY",
-  "directory_status": "GENERATED_FROM_PINNED_GITHUB_TREES",
-  "content_status": "NOT_AUDITED",
-  "last_completed_file": null,
-  "within_file_position": null,
+  "phase": "VERIFY_DIRECTORY_PARTIAL_READING",
+  "directory_status": "BLOCKED_RECURSIVE_TREES_UNAVAILABLE; branch names 3/3 observed; pinned inventory unverified",
+  "content_status": "PARTIAL_ONE_FILE_READ",
+  "last_completed_file": "contracts/.gitignore",
+  "last_completed_blob": "5a3b325b6cc2a680d998d7159413deab0fbf6292",
+  "within_file_position": "EOF",
   "findings": [],
-  "blockers": [],
+  "read_no_findings": [
+    {
+      "path": "contracts/.gitignore",
+      "commit": "bcd5b436008b912806c3b79b5bbfd46a8b05ec39",
+      "blob": "5a3b325b6cc2a680d998d7159413deab0fbf6292",
+      "reason": "Build/cache and .env ignore patterns; no distinct interaction protocol evidenced"
+    }
+  ],
+  "next_file": "contracts/EVE_Environment_Wrapper.sol",
+  "blockers": [
+    "Full recursive source trees for three pinned branches not exposed by connector; external GitHub API web access failed. Directory header not verified; source drift unknown.",
+    "Scheduler UUID unavailable; no full branch-head lease available"
+  ],
   "next_directory": "../../skills/Contract_ReadMe/Contract000_readme.md",
-  "updated": "2026-11-15"
+  "updated": "2026-11-15",
+  "last_run_id": "automation-turn-11-2026-11-15T10:59:40-06:00 (scheduler UUID unavailable)"
 }
