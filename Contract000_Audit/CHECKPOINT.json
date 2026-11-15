@@ -4,8 +4,12 @@
   "branch_index": 0,
   "category_index": 0,
   "next_directory": "claude%2Fgithub-claude-code-connection-98qkbx/protocols/Contract_ReadMe/Contract000_readme.md",
-  "directory_status": "GENERATED_FROM_PINNED_GITHUB_TREES",
-  "content_status": "NOT_AUDITED",
-  "last_run_id": null,
+  "directory_status": "BLOCKED_RECURSIVE_TREE_VERIFICATION",
+  "content_status": "PARTIAL_ONE_FILE_READ",
+  "last_completed_file": "contracts/.gitignore",
+  "next_file": "contracts/EVE_Environment_Wrapper.sol",
+  "source_commit": "bcd5b436008b912806c3b79b5bbfd46a8b05ec39",
+  "category_checkpoint_commit": "062775af5dc0da88187c35a75da891285cd6bd47",
+  "last_run_id": "automation-turn-11-2026-11-15T10:59:40-06:00 (scheduler UUID unavailable)",
   "updated": "2026-11-15"
 }
