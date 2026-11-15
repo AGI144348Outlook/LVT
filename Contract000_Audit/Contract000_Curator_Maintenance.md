@@ -24,8 +24,8 @@ The following are literal entry paths relative to Contract000_Audit/. Resolve th
 
 | Branch | Entry directory | Next branch ID |
 |---|---|---|
-| `claude/github-claude-code-connection-98qkbx` | [start](claude%2Fgithub-claude-code-connection-98qkbx/protocols/Contract_ReadMe/Contract000_readme.md) | 1 |
-| `experiment/elemental-vault-v0` | [start](experiment%2Felemental-vault-v0/protocols/Contract_ReadMe/Contract000_readme.md) | 2 |
+| `claude/github-claude-code-connection-98qkbx` | [start](claude%252Fgithub-claude-code-connection-98qkbx/protocols/Contract_ReadMe/Contract000_readme.md) | 1 |
+| `experiment/elemental-vault-v0` | [start](experiment%252Felemental-vault-v0/protocols/Contract_ReadMe/Contract000_readme.md) | 2 |
 | `main` | [start](main/protocols/Contract_ReadMe/Contract000_readme.md) | 0 |
 
 ## Final repository routing protocol
