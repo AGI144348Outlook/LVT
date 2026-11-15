@@ -1,0 +1,36 @@
+{
+  "schema": "contract000.branch-map.v1",
+  "repository": "AGI144348Outlook/LVT",
+  "source_snapshot_date": "2026-11-15",
+  "maintenance_branch": "main",
+  "excluded_root": "Contract000_Audit",
+  "branches": [
+    {
+      "id": 0,
+      "name": "claude/github-claude-code-connection-98qkbx",
+      "folder": "claude%2Fgithub-claude-code-connection-98qkbx",
+      "source_commit": "bcd5b436008b912806c3b79b5bbfd46a8b05ec39",
+      "source_tree": "bcd5b436008b912806c3b79b5bbfd46a8b05ec39",
+      "entry": "claude%2Fgithub-claude-code-connection-98qkbx/protocols/Contract_ReadMe/Contract000_readme.md",
+      "next_branch_id": 1
+    },
+    {
+      "id": 1,
+      "name": "experiment/elemental-vault-v0",
+      "folder": "experiment%2Felemental-vault-v0",
+      "source_commit": "f3849394d0466e88696b970d655dee7920203832",
+      "source_tree": "f3849394d0466e88696b970d655dee7920203832",
+      "entry": "experiment%2Felemental-vault-v0/protocols/Contract_ReadMe/Contract000_readme.md",
+      "next_branch_id": 2
+    },
+    {
+      "id": 2,
+      "name": "main",
+      "folder": "main",
+      "source_commit": "122aeae062604c2128c9d3fa1a5beb3d64d0ca0a",
+      "source_tree": "122aeae062604c2128c9d3fa1a5beb3d64d0ca0a",
+      "entry": "main/protocols/Contract_ReadMe/Contract000_readme.md",
+      "next_branch_id": 0
+    }
+  ]
+}
