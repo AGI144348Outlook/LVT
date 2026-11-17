@@ -5,12 +5,14 @@
   "source_commit": "bcd5b436008b912806c3b79b5bbfd46a8b05ec39",
   "category": "protocols",
   "phase": "VERIFY_DIRECTORY_PARTIAL_READING",
-  "directory_status": "BLOCKED_RECURSIVE_TREES_UNAVAILABLE; branch names 3/3 observed; pinned inventory unverified",
-  "content_status": "PARTIAL_ONE_FILE_READ",
-  "last_completed_file": "contracts/.gitignore",
-  "last_completed_blob": "5a3b325b6cc2a680d998d7159413deab0fbf6292",
+  "directory_status": "BLOCKED_RECURSIVE_TREES_UNAVAILABLE; pinned list-only inventory read, not independently reconciled",
+  "content_status": "PARTIAL_TWO_FILES_READ",
+  "last_completed_file": "contracts/EVE_Environment_Wrapper.sol",
+  "last_completed_blob": "e0ea9caccd15d74e93011367b69e6dbd75094271",
   "within_file_position": "EOF",
-  "findings": [],
+  "findings": [
+    "LVT-PROT-001"
+  ],
   "read_no_findings": [
     {
       "path": "contracts/.gitignore",
@@ -19,12 +21,12 @@
       "reason": "Build/cache and .env ignore patterns; no distinct interaction protocol evidenced"
     }
   ],
-  "next_file": "contracts/EVE_Environment_Wrapper.sol",
+  "next_file": "contracts/file_provenanve_protocol.md",
   "blockers": [
-    "Full recursive source trees for three pinned branches not exposed by connector; external GitHub API web access failed. Directory header not verified; source drift unknown.",
-    "Scheduler UUID unavailable; no full branch-head lease available"
+    "No recursive-tree read action exposed by connected GitHub connector; inventory/current tree reconciliation remains unverified.",
+    "Scheduler UUID unavailable; no atomic run-level claim established."
   ],
   "next_directory": "../../skills/Contract_ReadMe/Contract000_readme.md",
-  "updated": "2026-11-15",
-  "last_run_id": "automation-turn-11-2026-11-15T10:59:40-06:00 (scheduler UUID unavailable)"
+  "updated": "2026-11-16",
+  "last_run_id": "automation-turn-11-2026-11-16T19:01-06:00 (scheduler UUID unavailable)"
 }
